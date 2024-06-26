@@ -6,18 +6,19 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class RegisterViewController: UIViewController {
-
+    
     private let scrollView: UIScrollView = {
-       let scrollView = UIScrollView()
+        let scrollView = UIScrollView()
         scrollView.clipsToBounds = true
         return scrollView
     }()
     
     private let imageView: UIImageView = {
         let imageView = UIImageView()
-        imageView.image = UIImage(systemName: "person.circle.fill")
+        imageView.image = UIImage(systemName: "person.circle")
         imageView.tintColor = .gray
         imageView.contentMode = .scaleAspectFit
         imageView.layer.masksToBounds = true
@@ -27,7 +28,7 @@ class RegisterViewController: UIViewController {
     }()
     
     private let firstNameField: UITextField = {
-       let field = UITextField()
+        let field = UITextField()
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .continue
@@ -42,7 +43,7 @@ class RegisterViewController: UIViewController {
     }()
     
     private let lastNameField: UITextField = {
-       let field = UITextField()
+        let field = UITextField()
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .continue
@@ -57,7 +58,7 @@ class RegisterViewController: UIViewController {
     }()
     
     private let emailField: UITextField = {
-       let field = UITextField()
+        let field = UITextField()
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .continue
@@ -70,9 +71,9 @@ class RegisterViewController: UIViewController {
         field.backgroundColor = .white
         return field
     }()
-
+    
     private let passwordField: UITextField = {
-       let field = UITextField()
+        let field = UITextField()
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.returnKeyType = .done
@@ -88,7 +89,7 @@ class RegisterViewController: UIViewController {
     }()
     
     private let registerButton: UIButton = {
-       let button = UIButton()
+        let button = UIButton()
         button.setTitle("Register", for: .normal)
         button.backgroundColor = .systemGreen
         button.setTitleColor(.white, for: .normal)
@@ -126,7 +127,6 @@ class RegisterViewController: UIViewController {
     }
     
     @objc private func didTapChangeProfilePic() {
-        print("change pic called")
         presentPhotoActionSheet()
     }
     
@@ -192,10 +192,43 @@ class RegisterViewController: UIViewController {
         }
         
         // firebase
+        DataBaseManager.shared.userAlreadyExists(with: email, completion: {[weak self] exists in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            guard !exists else {
+                strongSelf.alertUserLoginError(message: "Looks like user account for that email already exists")
+                return
+            }
+            
+            FirebaseAuth.Auth.auth().createUser(withEmail: email,
+                                                password: password,
+                                                completion: {
+                authResult,
+                error in
+                
+                guard let result = authResult,
+                      error == nil else {
+                    print("error creating user")
+                    return
+                }
+                
+                DataBaseManager.shared.insertUser(
+                    with: ChatAppUser(
+                        firstName: firstName,
+                        lastName: lastName,
+                        emailAddress: email
+                    )
+                )
+                strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            })
+        })
+        
     }
     
-    func alertUserLoginError() {
-        let alert = UIAlertController(title: "Whoops", message: "Enter all info to create a new account", preferredStyle: .alert)
+    func alertUserLoginError(message: String = "Enter all info to create a new account") {
+        let alert = UIAlertController(title: "Whoops", message: message, preferredStyle: .alert)
         alert.addAction((UIAlertAction(title: "Dismiss", style: .cancel, handler: nil)))
         present(alert, animated: true)
     }
@@ -205,8 +238,8 @@ class RegisterViewController: UIViewController {
         vc.title = "Create Account"
         navigationController?.pushViewController(vc, animated: true)
     }
-
-
+    
+    
 }
 
 extension RegisterViewController: UITextFieldDelegate {
@@ -235,7 +268,7 @@ extension RegisterViewController: UIImagePickerControllerDelegate, UINavigationC
         actionSheet.addAction(UIAlertAction(title: "Choose Photo", style: .default, handler: { [weak self] _ in
             self?.presentPhotoPicker()
         }))
-
+        
         present(actionSheet, animated: true)
     }
     
@@ -269,6 +302,6 @@ extension RegisterViewController: UIImagePickerControllerDelegate, UINavigationC
     
 }
 
-    
+
 
 
