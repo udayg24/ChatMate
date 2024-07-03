@@ -91,6 +91,7 @@ class ConversationsViewController: UIViewController {
     
     private func createNewConversation(result: [String: String]) {
         guard let name = result["name"], let email = result["email"] else {
+            print("name or email no found")
             return
         }
         let vc = ChatViewController(with: email, id: nil)
@@ -148,7 +149,7 @@ extension ConversationsViewController: UITableViewDelegate, UITableViewDataSourc
         let model = conversations[indexPath.row]
 
         let vc = ChatViewController(with: model.otherUserEmail, id: model.id)
-        vc.title = "John Doe"
+        vc.title = model.name
         vc.navigationItem.largeTitleDisplayMode = .never
         navigationController?.pushViewController(vc, animated: true)
     }
