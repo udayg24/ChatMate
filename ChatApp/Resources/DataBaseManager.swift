@@ -8,6 +8,7 @@
 import Foundation
 import FirebaseDatabase
 import MessageKit
+import MessageKit
 
 final class DataBaseManager {
     
@@ -19,6 +20,19 @@ final class DataBaseManager {
         var safeEmail = emailAddress.replacingOccurrences(of: ".", with: "-")
         safeEmail = safeEmail.replacingOccurrences(of: "@", with: "-")
         return safeEmail
+    }
+}
+
+extension DataBaseManager {
+    
+    public func getDataFor(path: String, completion: @escaping (Result<Any, Error>) -> Void) {
+        self.database.child("\(path)").observeSingleEvent(of: .value, with: { snapshot in
+            guard let value = snapshot.value else {
+                completion(.failure(DatabaseError.failedToFetch))
+                return
+            }
+            completion(.success(value))
+        })
     }
 }
 
@@ -85,6 +99,8 @@ extension DataBaseManager {
                         let newColletion: [[String: String]] = [
                             ["name": user.firstName + " " + user.lastName,
                             "email": user.safeEmail]
+                            ["name": user.firstName + " " + user.lastName,
+                            "email": user.safeEmail]
                         ]
                         
                         self.database.child("users").setValue(newColletion, withCompletionBlock: { error, _ in
@@ -126,11 +142,16 @@ extension DataBaseManager {
             let currentName = UserDefaults.standard.value(forKey: "name") as? String
         else {
             print("name or email no found")
+        guard let currentEmail = UserDefaults.standard.value(forKey: "email") as? String,
+            let currentName = UserDefaults.standard.value(forKey: "name") as? String
+        else {
+            print("name or email no found")
             return
         }
         let safeEmail = DataBaseManager.safeEmail(emailAddress: currentEmail)
         let ref = database.child("\(safeEmail)")
         
+        ref.observeSingleEvent(of: .value, with: { [weak self] snapshot in
         ref.observeSingleEvent(of: .value, with: { [weak self] snapshot in
             guard var userNode = snapshot.value as? [String: Any] else {
                 completion(false)
@@ -178,7 +199,7 @@ extension DataBaseManager {
                     "is_read": false
                 ]
             ]
-
+            
             let reciepient_newConversationData = [
                 "id": conversationId,
                 "other_user_email": safeEmail,
@@ -188,7 +209,7 @@ extension DataBaseManager {
                     "message": message,
                     "is_read": false
                 ]
-            ] as [String : Any]
+            ]
             
             //update receipent conversation entry
             
@@ -203,7 +224,16 @@ extension DataBaseManager {
             })
             
             // update current user conversation entry
-   
+            let reciepient_newConversationData = [
+                "id": conversationId,
+                "other_user_email": safeEmail,
+                "name": currentName,
+                "latest_message": [
+                    "date": dateString,
+                    "message": message,
+                    "is_read": false
+                ]
+            ]
             
             //update receipent conversation entry
             
@@ -535,7 +565,6 @@ extension DataBaseManager {
         completion(true)
     }
 }
-            
 
 
 struct ChatAppUser {

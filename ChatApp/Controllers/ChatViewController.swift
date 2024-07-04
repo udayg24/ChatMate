@@ -223,8 +223,10 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
         let selfSender = self.selfSender,
         let messageId = createMessageId() else {
             print("something went wrong")
+            print("something went wrong")
             return
         }
+        let message = Message(sender: selfSender, messageId: messageId, sentDate: Date(), kind: .text(text))
         let message = Message(sender: selfSender, messageId: messageId, sentDate: Date(), kind: .text(text))
         
         // send message
@@ -243,6 +245,9 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
             })
         }
         else {
+            guard let conversationId = conversationId, let name = self.title else {
+                return
+            }
             guard let conversationId = conversationId, let name = self.title else {
                 return
             }
