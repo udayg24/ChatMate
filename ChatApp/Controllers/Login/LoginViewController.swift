@@ -190,8 +190,24 @@ class LoginViewController: UIViewController {
             
             let user = result.user
             
-            UserDefaults.standard.set(email, forKey: "email")
+            let safeEmail = DataBaseManager.safeEmail(emailAddress: email)
+            DataBaseManager.shared.getDataFor(path: safeEmail, completion: { [weak self] result in
+                switch result {
+                case .success(let data):
+                    guard let userData = data as? [String: Any],
+                          let firstName = userData["first_name"] as? String,
+                          let lastName = userData["last_name"] as? String else {
+                        return
+                    }
+                    UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
+                    
+                case .failure(let error):
+                    print("failed to read data")
+                }
+            })
             
+            UserDefaults.standard.set(email, forKey: "email")
+
             print("succesfully logged in:", user)
             strongSelf.navigationController?.dismiss(animated: true, completion: nil)
         })
@@ -222,7 +238,8 @@ class LoginViewController: UIViewController {
                   let lastName = user.profile?.familyName else {return}
             
             UserDefaults.standard.set(email, forKey: "email")
-            
+            UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
+
             DataBaseManager.shared.userAlreadyExists(with: email, completion: {exists in
                 if !exists {
                     let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
@@ -336,7 +353,8 @@ extension LoginViewController: LoginButtonDelegate {
                 return
             }
             
-            UserDefaults.standard.set(email, forKey: "email")
+            UserDefaults.standard.set(email, forKey: "email")            
+            UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
             
             DataBaseManager.shared.userAlreadyExists(with: email, completion: { exists in
                 if !exists {
