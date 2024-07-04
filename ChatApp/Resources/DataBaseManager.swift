@@ -35,6 +35,19 @@ extension DataBaseManager {
     }
 }
 
+extension DataBaseManager {
+    
+    public func getDataFor(path: String, completion: @escaping (Result<Any, Error>) -> Void) {
+        self.database.child("\(path)").observeSingleEvent(of: .value, with: { snapshot in
+            guard let value = snapshot.value else {
+                completion(.failure(DatabaseError.failedToFetch))
+                return
+            }
+            completion(.success(value))
+        })
+    }
+}
+
 // MARK: - Account Management
 extension DataBaseManager {
     
@@ -85,6 +98,8 @@ extension DataBaseManager {
                         let newColletion: [[String: String]] = [
                             ["name": user.firstName + " " + user.lastName,
                             "email": user.safeEmail]
+                            ["name": user.firstName + " " + user.lastName,
+                            "email": user.safeEmail]
                         ]
                         
                         self.database.child("users").setValue(newColletion, withCompletionBlock: { error, _ in
@@ -126,11 +141,16 @@ extension DataBaseManager {
             let currentName = UserDefaults.standard.value(forKey: "name") as? String
         else {
             print("name or email no found")
+        guard let currentEmail = UserDefaults.standard.value(forKey: "email") as? String,
+            let currentName = UserDefaults.standard.value(forKey: "name") as? String
+        else {
+            print("name or email no found")
             return
         }
         let safeEmail = DataBaseManager.safeEmail(emailAddress: currentEmail)
         let ref = database.child("\(safeEmail)")
         
+        ref.observeSingleEvent(of: .value, with: { [weak self] snapshot in
         ref.observeSingleEvent(of: .value, with: { [weak self] snapshot in
             guard var userNode = snapshot.value as? [String: Any] else {
                 completion(false)
@@ -179,6 +199,30 @@ extension DataBaseManager {
                 ]
             ]
             
+            let reciepient_newConversationData = [
+                "id": conversationId,
+                "other_user_email": safeEmail,
+                "name": currentName,
+                "latest_message": [
+                    "date": dateString,
+                    "message": message,
+                    "is_read": false
+                ]
+            ]
+            
+            //update receipent conversation entry
+            
+            self?.database.child("\(otherUserEmail)/conversations").observeSingleEvent(of: .value, with: { [weak self] snapshot in
+                if var conversations = snapshot.value as? [[String: Any]] {
+                    conversations.append(reciepient_newConversationData)
+                    self?.database.child("\(otherUserEmail)/conversations").setValue([conversations])
+                } else {
+                    self?.database.child("\(otherUserEmail)/conversations").setValue([reciepient_newConversationData])
+                }
+                
+            })
+            
+            // update current user conversation entry
             let reciepient_newConversationData = [
                 "id": conversationId,
                 "other_user_email": safeEmail,
@@ -536,5 +580,7 @@ struct ChatAppUser {
         return "\(safeEmail)_profile_picture.png"
     }
 }
+
+
 
 

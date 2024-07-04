@@ -182,6 +182,14 @@ class ChatViewController: MessagesViewController {
                         self?.messagesCollectionView.scrollToBottom()
                     }
                 }
+                print(messages)
+                DispatchQueue.main.async {
+                    self?.messagesCollectionView.reloadDataAndKeepOffset()
+
+                    if shouldScrollToBottom {
+                        self?.messagesCollectionView.scrollToBottom()
+                    }
+                }
             case .failure(let error):
                 print("failed to get messages")
             }
@@ -192,6 +200,12 @@ class ChatViewController: MessagesViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         messageInputBar.inputTextView.becomeFirstResponder()
+        
+        if let conversationId = conversationId {
+            print("fetching messages")
+            print(conversationId)
+            listenForMessages(id: conversationId, shouldScrollToBottom: true)
+        }
         
         if let conversationId = conversationId {
             print("fetching messages")
@@ -209,17 +223,21 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
         let selfSender = self.selfSender,
         let messageId = createMessageId() else {
             print("something went wrong")
+            print("something went wrong")
             return
         }
+        let message = Message(sender: selfSender, messageId: messageId, sentDate: Date(), kind: .text(text))
         let message = Message(sender: selfSender, messageId: messageId, sentDate: Date(), kind: .text(text))
         
         // send message
         if isNewConverstion {
             //create convo in database
           
+          
             DataBaseManager.shared.createNewConversation(with: otherUserEmail, name: self.title ?? "User", firstMessage: message, completion: { [weak self] success in
                 if success {
                     print("message sent")
+                    self?.isNewConverstion = false
                     self?.isNewConverstion = false
                 } else {
                     print("failed to send")
@@ -227,6 +245,9 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
             })
         }
         else {
+            guard let conversationId = conversationId, let name = self.title else {
+                return
+            }
             guard let conversationId = conversationId, let name = self.title else {
                 return
             }
